@@ -28,4 +28,17 @@ mkdir counts
 bedtools bamtobed -i alligned_reads/100k.C1-1-501.aligned.sorted.bam > alligned_reads/100k.C1-1-501.aligned.sorted.bed
 bedtools coverage -counts -a /localdisk/home/data/BPSM/AY21/TriTrypDB-46_TcongolenseIL3000_2019.bed -b alligned_reads/100k.C1-1-501.aligned.sorted.bed > counts/100k.C1-1-501.counts.txt
 
-print("done")
+#Now I want to work on making a file that shows the gene, gene description and then the counts for each file
+# make a file called gene_expressions.txt, add headers and the contents	form columns 4,5 in the	bed file
+touch gene_expressions.txt
+echo "Gene	Gene_description">>gene_expressions.txt
+cut -f 4,5 /localdisk/home/data/BPSM/AY21/TriTrypDB-46_TcongolenseIL3000_2019.bed >>gene_expressions.txt
+
+#Now I want to merge the gene count file, but need to sort both
+sort -t$'\t' -k1,1 gene_expressions.txt
+sort -t$'\t' -k4,4 counts/100k.C1-1-501.counts.txt > counts/100k.C1-1-501.counts.sorted.txt
+cut -f 4,6 counts/100k.C1-1-501.counts.sorted.txt > temp_count_file.txt
+file="100k.C1-1-501.counts.sorted.txt"
+sed -i "1i Gene ""$file" temp_count_file.txt
+#unset file
+join -t$'\t' -e 'NaN' gene_expressions.txt temp_count_file.txt > gene_expressions_test.txt
