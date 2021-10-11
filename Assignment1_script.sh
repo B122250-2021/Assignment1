@@ -1,44 +1,51 @@
 #B122250
 
-#With one file
-#Directory for fastqc results
+#With many files
+#Directory for fastqc results, index files, alligned_reads and counts
 mkdir fastqc_results
+mkdir index_files
+mkdir alligned_reads
+mkdir counts
+mkdir bamfiles
 
+
+#to allign the reads, I need to make an index of the reference genome in a directory called index_files, only need to do this once, so outside$
+bowtie2-build /localdisk/home/data/BPSM/AY21/Tcongo_genome/TriTrypDB-46_TcongolenseIL3000_2019_Genome.fasta.gz index_files/index_ref_file
+
+#now looping for every file
+for file in /localdisk/home/data/BPSM/AY21/fastq/*.fq.gz
+do
 #-f flag used, to specify the input format, in this case fastq
 # For future versions, I might want to use the -t flag,to specify the threads
-fastqc -f fastq /localdisk/home/data/BPSM/AY21/fastq/100k.C1-1-501_1.fq.gz -o $PWD/fastqc_results
+fastqc -t 6 -f $file -o $PWD/fastqc_results
+done
+
+#loop to produce file with filenames
+touch filenames.txt
+for file in /localdisk/home/data/BPSM/AY21/fastq/*.fq.gz
+do
+echo "${file:37}" >> filenames.txt
+done
 
 #This script needs a section to produce the fastqc report, would go here
 
-#to allign the reads, I need to make an index of the reference genome in a directory called index_files
-
-mkdir index_files
-bowtie2-build /localdisk/home/data/BPSM/AY21/Tcongo_genome/TriTrypDB-46_TcongolenseIL3000_2019_Genome.fasta.gz index_files/index_ref_file
-
+cat forward_and_reverse_reads.txt | while read line
+do
+input_file_1=$(echo ${line:0:21})
+input_file_2=$(echo ${line:21})
+sam_name=${line:0:13}
 #the allignment itself, with output in alligned_reads
-mkdir alligned_reads
-bowtie2 -x index_files/index_ref_file -1 /localdisk/home/data/BPSM/AY21/fastq/100k.C1-1-501_1.fq.gz -2 /localdisk/home/data/BPSM/AY21/fastq/100k.C1-1-501_2.fq.gz -S alligned_reads/100k.C1-1-501.aligned.sam
+bowtie2 -x index_files/index_ref_file -1 /localdisk/home/data/BPSM/AY21/fastq/input_file_1 -2 /localdisk/home/data/BPSM/AY21/fastq/input_file_2 -S alligned_reads/$sam_name.aligned.sam
+echo "$sam_name" >> sam_filenames.txt
+done
 
 #convert output to indexed bam
-samtools view -b alligned_reads/100k.C1-1-501.aligned.sam  > alligned_reads/100k.C1-1-501.aligned.bam && samtools sort alligned_reads/100k.C1-1-501.aligned.bam > alligned_reads/100k.C1-1-501.aligned.sorted.bam && samtools index alligned_reads/100k.C1-1-501.aligned.sorted.bam
+cat sam_filenames.txt | while read samfile
+do
+samtools view -b alligned_reads/$samfile.aligned.sam  > bamfiles/$samfile.aligned.bam && samtools sort bamfiles/$samfile.aligned.bam > bamfiles/$samfile.aligned.sorted.bam && samtools index bamfiles/$samfile.aligned.sorted.bam
 
 # sam to bam and then count gene reads using bedtools coverage, which outputs text file into folder called counts
 
-mkdir counts
-bedtools bamtobed -i alligned_reads/100k.C1-1-501.aligned.sorted.bam > alligned_reads/100k.C1-1-501.aligned.sorted.bed
-bedtools coverage -counts -a /localdisk/home/data/BPSM/AY21/TriTrypDB-46_TcongolenseIL3000_2019.bed -b alligned_reads/100k.C1-1-501.aligned.sorted.bed > counts/100k.C1-1-501.counts.txt
-
-#Now I want to work on making a file that shows the gene, gene description and then the counts for each file
-# make a file called gene_expressions.txt, add headers and the contents	form columns 4,5 in the	bed file
-touch gene_expressions.txt
-echo "Gene	Gene_description">>gene_expressions.txt
-cut -f 4,5 /localdisk/home/data/BPSM/AY21/TriTrypDB-46_TcongolenseIL3000_2019.bed >>gene_expressions.txt
-
-#Now I want to merge the gene count file, but need to sort both
-sort -t$'\t' -k1,1 gene_expressions.txt
-sort -t$'\t' -k4,4 counts/100k.C1-1-501.counts.txt > counts/100k.C1-1-501.counts.sorted.txt
-cut -f 4,6 counts/100k.C1-1-501.counts.sorted.txt > temp_count_file.txt
-file="100k.C1-1-501.counts.sorted.txt"
-sed -i "1i Gene ""$file" temp_count_file.txt
-#unset file
-join -t$'\t' -e 'NaN' gene_expressions.txt temp_count_file.txt > gene_expressions_test.txt
+bedtools bamtobed -i bamfiles/$samfile.aligned.sorted.bam > bamfiles/$samfile.aligned.sorted.bed
+bedtools coverage -counts -a /localdisk/home/data/BPSM/AY21/TriTrypDB-46_TcongolenseIL3000_2019.bed -b bamfiles/$samfile.aligned.sorted.bed > counts/$samfile.counts.txt
+done
