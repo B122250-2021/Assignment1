@@ -2,7 +2,7 @@
 
 #With many files
 #Directory for fastqc results, index files, alligned_reads and counts
-mkdir fastqc_results && mkdir index_files && mkdir alligned_reads && mkdir counts && mkdir bamfiles && mkdir final_counts
+mkdir fastqc_results && mkdir index_files && mkdir alligned_reads && mkdir counts && mkdir bamfiles && mkdir final_counts && mkdir fastqc_reports
 
 #to allign the reads, I need to make an index of the reference genome in a directory called index_files, only need to do this once, so outside$
 bowtie2-build --threads 60 /localdisk/home/data/BPSM/AY21/Tcongo_genome/TriTrypDB-46_TcongolenseIL3000_2019_Genome.fasta.gz index_files/index_ref_file
@@ -27,7 +27,29 @@ echo "${file:37}" >> reverse_reads.txt
 done
 paste -d "" forward_reads.txt reverse_reads.txt > forward_and_reverse_reads.txt
 
-#This script needs a section to produce the fastqc report, would go here
+#Making the FASTQC report
+counter_0=0
+counter_1=1
+echo "Sample" >> fastqc_categories.txt && echo "Basic Statistics" >> fastqc_categories.txt && echo "Per base sequence quality" >> fastqc_categories.txt && echo "Per sequence quality scores" >> fastqc_categories.txt && echo "Per base sequence content" >> fastqc_categories.txt && echo "Per sequence GC content" >> fastqc_categories.txt && echo "Per base N content" >> fastqc_categories.txt && echo "Sequence Length Distribution" >> fastqc_categories.txt && echo "Sequence Duplication Levels" >> fastqc_categories.txt && echo "Overrepresented sequences" >> fastqc_categories.txt && echo "Adapter Content" >> fastqc_categories.txt
+cp fastqc_categories.txt fastqc_reports/fastqc_report_0.txt
+cat forward_reads.txt reverse_reads.txt > all_reads.txt
+cd fastqc_results
+unzip '*.zip'
+cd ..
+cat all_reads.txt | while read filename
+do
+current_file=$(echo ${filename:0:15}) 
+echo "$current_file" > temp_fastqc_file.txt
+cut -f 1 fastqc_results/"$current_file"_fastqc/summary.txt >> temp_fastqc_file.txt
+paste -d'\t' fastqc_reports/fastqc_report_$counter_0.txt temp_fastqc_file.txt > fastqc_reports/fastqc_report_$counter_1.txt
+rm -fr temp_fastqc_file.txt
+((counter_0=counter_0+1))
+((counter_1=counter_1+1))
+done
+finished_report=$(wc -l  all_reads.txt | cut -d ' ' -f1)
+mv fastqc_reports/*$finished_report.txt fastqc_report.txt
+rm -fr fastqc_reports && rm -fr all_reads && rm -fr fastqc_categories && rm -fr forward_reads && rm -fr reverse_reads && rm -fr forward_and_reverse_reads
+
 
 #Now I want to work on making a file that shows the gene, gene description and then the counts for each file. This goes before the loop, will need it later for the final table of counts
 # make a file called gene_expressions.txt, add headers and the contents form columns 4,5 in the original bed file
@@ -46,6 +68,7 @@ sam_name=${line:0:13}
 bowtie2 -p 60 -x index_files/index_ref_file -1 /localdisk/home/data/BPSM/AY21/fastq/$input_file_1 -2 /localdisk/home/data/BPSM/AY21/fastq/$input_file_2 -S alligned_reads/$sam_name.aligned.sam
 echo "$sam_name" >> sam_filenames.txt
 done
+
 
 i=0
 p=1
