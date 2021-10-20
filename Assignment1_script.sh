@@ -1,5 +1,5 @@
 #B122250
-
+#!/bin/bash
 #With many files
 #Directory for fastqc results, index files, aligned_reads and counts
 mkdir fastqc_results && mkdir index_files && mkdir aligned_reads && mkdir counts && mkdir bamfiles && mkdir final_counts && mkdir fastqc_reports
@@ -70,7 +70,7 @@ echo "$sam_name" >> sam_filenames.txt
 lastline=$(tail -1 stats.file)
 success=$(echo ${lastline:0:1})
 alignmentrate=$(echo ${lastline:0:5})
-if [ $success < 8 ]
+if [ "$success" -lt "8" ]
 then
    echo "Replicate "$sam_name" has a rate of alignment of only "$alignmentrate". You might want to test for contamination using BLAST" >> logfile.log
 fi 
@@ -81,6 +81,7 @@ i=0
 p=1
 
 #convert output to indexed bam
+sort -t$'\t' -k1 genes.txt > genes.sorted
 cat sam_filenames.txt | while read samfile
 do
 samtools view -b aligned_reads/$samfile.aligned.sam  > bamfiles/$samfile.aligned.bam && samtools sort bamfiles/$samfile.aligned.bam > bamfiles/$samfile.aligned.sorted.bam && samtools index bamfiles/$samfile.aligned.sorted.bam
@@ -91,12 +92,11 @@ bedtools bamtobed -i bamfiles/$samfile.aligned.sorted.bam > bamfiles/$samfile.al
 bedtools coverage -counts -a /localdisk/home/data/BPSM/AY21/TriTrypDB-46_TcongolenseIL3000_2019.bed -b bamfiles/$samfile.aligned.sorted.bed > counts/$samfile.counts.txt
 
 #Now I want to merge the gene count file, but need to sort both, as you need it before the merging
-sort -t$'\t' -k1 genes.txt
 sort -t$'\t' -k4 counts/$samfile.counts.txt > counts/$samfile.counts.sorted.txt
 #cut the gene id and the count columns
 cut -f 4,6 counts/$samfile.counts.sorted.txt > temp_count_file.txt
 sed -i "1i Gene""	$samfile" temp_count_file.txt
-join -t$'\t' -e 'NaN' genes.txt temp_count_file.txt > temp_gene_counts.txt
+join -t$'\t' -e 'NaN' genes.sorted temp_count_file.txt > temp_gene_counts.txt
 
 #I need to make sure that the files are the same length, before joining them
 
@@ -195,5 +195,8 @@ cp mean_counts/samples.txt samples.txt
 
 #Remove messy files and directories
 rm -fr forward_and_reverse_reads.txt && rm -fr forward_reads.txt && rm -fr reverse_reads.txt && rm -fr temp_gene_counts_single_columns.txt && rm -fr temp_gene_counts.txt && rm -fr temp_count_file.txt && rm -fr genes.txt && rm -fr genes.sorted.txt && rm -fr sam_filenames.txt
-rm -fr counts && rm -fr final_counts && rm -fr mean_counts && rm -fr stats.file && rm -fr all_reads.txt && rm -fr fastqc_categories.txt && rm -fr samples.txt
+rm -fr counts && rm -fr final_counts && rm -fr mean_counts && rm -fr stats.file && rm -fr all_reads.txt && rm -fr fastqc_categories.txt && rm -fr samples.txt && rm -fr genes.sorted
+
+# Now making the fold change
+
 
