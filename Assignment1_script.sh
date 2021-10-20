@@ -1,10 +1,10 @@
 #B122250
 
 #With many files
-#Directory for fastqc results, index files, alligned_reads and counts
-mkdir fastqc_results && mkdir index_files && mkdir alligned_reads && mkdir counts && mkdir bamfiles && mkdir final_counts && mkdir fastqc_reports
+#Directory for fastqc results, index files, aligned_reads and counts
+mkdir fastqc_results && mkdir index_files && mkdir aligned_reads && mkdir counts && mkdir bamfiles && mkdir final_counts && mkdir fastqc_reports
 
-#to allign the reads, I need to make an index of the reference genome in a directory called index_files, only need to do this once, so outside$
+#to align the reads, I need to make an index of the reference genome in a directory called index_files, only need to do this once, so outside$
 bowtie2-build --threads 60 /localdisk/home/data/BPSM/AY21/Tcongo_genome/TriTrypDB-46_TcongolenseIL3000_2019_Genome.fasta.gz index_files/index_ref_file
 
 #now looping for every file
@@ -64,9 +64,16 @@ do
 input_file_1=$(echo ${line:0:21})
 input_file_2=$(echo ${line:21})
 sam_name=${line:0:13}
-#the allignment itself, with output in alligned_reads
-bowtie2 -p 60 -x index_files/index_ref_file -1 /localdisk/home/data/BPSM/AY21/fastq/$input_file_1 -2 /localdisk/home/data/BPSM/AY21/fastq/$input_file_2 -S alligned_reads/$sam_name.aligned.sam
+#the alignment itself, with output in aligned_reads
+bowtie2 -p 60 -x index_files/index_ref_file -1 /localdisk/home/data/BPSM/AY21/fastq/$input_file_1 -2 /localdisk/home/data/BPSM/AY21/fastq/$input_file_2 -S aligned_reads/$sam_name.aligned.sam 2> stats.file
 echo "$sam_name" >> sam_filenames.txt
+lastline=$(tail -1 stats.file)
+success=$(echo ${lastline:0:1})
+alignmentrate=$(echo ${lastline:0:5})
+if [ $success < 8 ]
+then
+   echo "Replicate "$sam_name" has a rate of alignment of only "$alignmentrate". You might want to test for contamination using BLAST" >> logfile.log
+fi 
 done
 
 
@@ -76,7 +83,7 @@ p=1
 #convert output to indexed bam
 cat sam_filenames.txt | while read samfile
 do
-samtools view -b alligned_reads/$samfile.aligned.sam  > bamfiles/$samfile.aligned.bam && samtools sort bamfiles/$samfile.aligned.bam > bamfiles/$samfile.aligned.sorted.bam && samtools index bamfiles/$samfile.aligned.sorted.bam
+samtools view -b aligned_reads/$samfile.aligned.sam  > bamfiles/$samfile.aligned.bam && samtools sort bamfiles/$samfile.aligned.bam > bamfiles/$samfile.aligned.sorted.bam && samtools index bamfiles/$samfile.aligned.sorted.bam
 
 # sam to bam and then count gene reads using bedtools coverage, which outputs text file into folder called counts
 
@@ -99,8 +106,6 @@ genelines2=$(wc -l  temp_gene_counts.txt | cut -d ' ' -f1)
 if [ $genelines1 != $genelines2 ]
 then
    echo "Error in replicate "$samfile"" >> logfile.log
-else
-   echo "Expression of replicate "$samfile" was reccorded correctly" >> logfile.log
 fi 
 
 cut -f 3 temp_gene_counts.txt > temp_gene_counts_single_columns.txt
@@ -190,4 +195,5 @@ cp mean_counts/samples.txt samples.txt
 
 #Remove messy files and directories
 rm -fr forward_and_reverse_reads.txt && rm -fr forward_reads.txt && rm -fr reverse_reads.txt && rm -fr temp_gene_counts_single_columns.txt && rm -fr temp_gene_counts.txt && rm -fr temp_count_file.txt && rm -fr genes.txt && rm -fr genes.sorted.txt && rm -fr sam_filenames.txt
-rm -fr counts && rm -fr final_counts && rm -fr mean_counts
+rm -fr counts && rm -fr final_counts && rm -fr mean_counts && rm -fr stats.file && rm -fr all_reads.txt && rm -fr fastqc_categories.txt && rm -fr samples.txt
+
