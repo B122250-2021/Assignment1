@@ -112,6 +112,82 @@ done
 #Select the last file, which is the one containing all the gene counts
 last_file=$(wc -l  sam_filenames.txt | cut -d ' ' -f1)
 mv final_counts/*$last_file.txt replicate_gene_expressions.txt
+
+mkdir mean_counts
+tail -n+2 /localdisk/home/data/BPSM/AY21/fastq/100k.fqfiles | awk '{print $2}'| sort | uniq > mean_counts/samples.txt
+cat mean_counts/samples.txt | while read sample
+do
+# 0 hours uninduced
+   cat /localdisk/home/data/BPSM/AY21/fastq/100k.fqfiles | grep "$sample" | awk -F '\t' '$4 == "0" {print $1}' > mean_counts/$sample.0hr.replicates.txt
+   cat mean_counts/$sample.0hr.replicates.txt | while read replicate
+   do
+      column=$(head -1 replicate_gene_expressions.txt | tr '\t' '\n' | cat -n | grep "$replicate"| cut -d$'\t' -f1)
+      cut -f $column replicate_gene_expressions.txt > mean_counts/$replicate.temp
+   done
+   paste mean_counts/*temp > mean_counts/$sample.0hr.uninduced.samples
+   rm -fr mean_counts/*temp
+   rm -fr mean_counts/*replicates.txt
+   tail -n+2 mean_counts/$sample.0hr.uninduced.samples | awk '{sum=0; for (i=1; i<=NF; i++) {sum=sum+$i;} m=sum/NF; print $0, m; }' | awk '{ print $4 }' > mean_counts/$sample.0hr.uninduced.mean
+   sed -i "1i""$sample"".0hr.uninduced" mean_counts/$sample.0hr.uninduced.mean
+   rm -fr mean_counts/*samples
+
+#24 hours induced
+   cat /localdisk/home/data/BPSM/AY21/fastq/100k.fqfiles | grep "$sample" | grep "Induced"| awk -F '\t' '$4 == "24" {print $1}' > mean_counts/$sample.24hr.induced.replicates.txt
+   cat mean_counts/$sample.24hr.induced.replicates.txt | while read replicate
+   do
+      column=$(head -1 replicate_gene_expressions.txt | tr '\t' '\n' | cat -n | grep "$replicate"| cut -d$'\t' -f1)
+      cut -f $column replicate_gene_expressions.txt > mean_counts/$replicate.temp
+   done
+   paste mean_counts/*temp > mean_counts/$sample.24hr.induced.samples
+   rm -fr mean_counts/*temp
+   rm -fr mean_counts/*replicates.txt
+   tail -n+2 mean_counts/$sample.24hr.induced.samples | awk '{sum=0; for (i=1; i<=NF; i++) {sum=sum+$i;} m=sum/NF; print $0, m; }' | awk '{ print $4 }' > mean_counts/$sample.24hr.induced.mean
+   sed -i "1i""$sample"".24hr.induced" mean_counts/$sample.24hr.induced.mean
+   rm -fr mean_counts/*samples
+#24 hours uninduced
+   cat /localdisk/home/data/BPSM/AY21/fastq/100k.fqfiles | grep "$sample" | grep "Uninduced"| awk -F '\t' '$4 == "24" {print $1}' > mean_counts/$sample.24hr.uninduced.replicates.txt
+   cat mean_counts/$sample.24hr.uninduced.replicates.txt | while read replicate
+   do
+      column=$(head -1 replicate_gene_expressions.txt | tr '\t' '\n' | cat -n | grep "$replicate"| cut -d$'\t' -f1)
+      cut -f $column replicate_gene_expressions.txt > mean_counts/$replicate.temp
+   done
+   paste mean_counts/*temp > mean_counts/$sample.24hr.uninduced.samples
+   rm -fr mean_counts/*temp
+   rm -fr mean_counts/*replicates.txt
+   tail -n+2 mean_counts/$sample.24hr.uninduced.samples | awk '{sum=0; for (i=1; i<=NF; i++) {sum=sum+$i;} m=sum/NF; print $0, m; }' | awk '{ print $4 }' > mean_counts/$sample.24hr.uninduced.mean
+   sed -i "1i""$sample"".24hr.uninduced" mean_counts/$sample.24hr.uninduced.mean
+   rm -fr mean_counts/*samples
+#48 hours induced
+   cat /localdisk/home/data/BPSM/AY21/fastq/100k.fqfiles | grep "$sample" | grep "Induced"| awk -F '\t' '$4 == "48" {print $1}' > mean_counts/$sample.48hr.induced.replicates.txt
+   cat mean_counts/$sample.48hr.induced.replicates.txt | while read replicate
+   do
+      column=$(head -1 replicate_gene_expressions.txt | tr '\t' '\n' | cat -n | grep "$replicate"| cut -d$'\t' -f1)
+      cut -f $column replicate_gene_expressions.txt > mean_counts/$replicate.temp
+   done
+   paste mean_counts/*temp > mean_counts/$sample.48hr.induced.samples
+   rm -fr mean_counts/*temp
+   rm -fr mean_counts/*replicates.txt
+   tail -n+2 mean_counts/$sample.48hr.induced.samples | awk '{sum=0; for (i=1; i<=NF; i++) {sum=sum+$i;} m=sum/NF; print $0, m; }' | awk '{ print $4 }' > mean_counts/$sample.48hr.induced.mean
+   sed -i "1i""$sample"".48hr.induced" mean_counts/$sample.48hr.induced.mean
+   rm -fr mean_counts/*samples
+#48 hours uninduced
+   cat /localdisk/home/data/BPSM/AY21/fastq/100k.fqfiles | grep "$sample" | grep "Uninduced"| awk -F '\t' '$4 == "48" {print $1}' > mean_counts/$sample.48hr.uninduced.replicates.txt
+   cat mean_counts/$sample.48hr.uninduced.replicates.txt | while read replicate
+   do
+      column=$(head -1 replicate_gene_expressions.txt | tr '\t' '\n' | cat -n | grep "$replicate"| cut -d$'\t' -f1)
+      cut -f $column replicate_gene_expressions.txt > mean_counts/$replicate.temp
+   done
+   paste mean_counts/*temp > mean_counts/$sample.48hr.uninduced.samples
+   rm -fr mean_counts/*temp
+   rm -fr mean_counts/*replicates.txt
+   tail -n+2 mean_counts/$sample.48hr.uninduced.samples | awk '{sum=0; for (i=1; i<=NF; i++) {sum=sum+$i;} m=sum/NF; print $0, m; }' | awk '{ print $4 }' > mean_counts/$sample.48hr.uninduced.mean
+   sed -i "1i""$sample"".48hr.uninduced" mean_counts/$sample.48hr.uninduced.mean
+   rm -fr mean_counts/*samples
+done
+paste mean_counts/*mean > mean_counts/replicate_mean_counts.txt
+paste genes.txt mean_counts/replicate_mean_counts.txt > replicate_mean_counts.txt
+cp mean_counts/samples.txt samples.txt
+
 #Remove messy files and directories
-rm -fr forward_and_reverse_reads.txt && rm -fr forward_reads.txt && rm -fr reverse_reads.txt && rm -fr temp_gene_counts_single_columns.txt && rm -fr temp_gene_counts.txt && rm -fr temp_count_file.txt && rm -fr genes.txt && rm -fr sam_filenames.txt
-rm -fr counts && rm -fr final_counts
+rm -fr forward_and_reverse_reads.txt && rm -fr forward_reads.txt && rm -fr reverse_reads.txt && rm -fr temp_gene_counts_single_columns.txt && rm -fr temp_gene_counts.txt && rm -fr temp_count_file.txt && rm -fr genes.txt && rm -fr genes.sorted.txt && rm -fr sam_filenames.txt
+rm -fr counts && rm -fr final_counts && rm -fr mean_counts
